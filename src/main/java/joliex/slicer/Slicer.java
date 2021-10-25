@@ -236,7 +236,8 @@ public class Slicer {
 			fmt.format( "%2s%s:%n", padding, service.getKey().toLowerCase() )
 				.format( "%4s", padding )
 				.format( "build: ./%s%n", service.getKey().toLowerCase() );
-			// Get JSONObject for current service
+			// If config for current service have defined a database component
+			// generate database component, and add volumes.
 			JSONObject tempService = (JSONObject) config.get(service.getKey());
 			if (tempService.containsKey("database")) {
 				volumes = true;
@@ -246,6 +247,7 @@ public class Slicer {
 				generateMYSQLComponent(fmt, db, service.getKey().toLowerCase());
 			}
 		}
+		// If any volumes are needed, add them to docker-compose in the end of the file.
 		if (volumes) {
 			fmt.format("volumes:%n");
 			// If any database is created, create a volume for each.
@@ -256,6 +258,14 @@ public class Slicer {
 		}
 	}
 
+	/**
+	 * Function that will generate a MYSQL component for a docker-compose file.
+	 *
+	 * @param (Formatter fmt) Formatter for docker-compose file
+	 * @param (JSONObject db) The extracted part concerning database information in config file for current service
+	 * @param (String serviceName) Name of the service that needs a MYSQL component
+	 * @return (void)
+	*/
 	private void generateMYSQLComponent(Formatter fmt, JSONObject db, String serviceName) {
 		fmt.format("  %s-db:%n", serviceName)
                 .format("    image: %s%n", db.get("RDBMS_IMAGE"))
@@ -271,6 +281,18 @@ public class Slicer {
                     .format("      - %s-db-vol:/var/lib/mysql%n", serviceName);
 	}
 
+	/**
+	 * This function is used if there inside the config file are specified a service needs
+	 * external resources. These will need to be placed in the current working directory inside a 
+	 * folder called /dependencies/. 
+	 * It will then create a /lib/ folder within the generated service folder. When this is copied
+	 * inside the docker container, jolie will recognize the lib folder and use the external resources 
+	 * within the container. 
+	 *
+	 * @param (String serviceName) Name of the current service, used to extract information from config.json
+	 * @param (String dependencyDest) Path to the dependency destination, e.g., monolith/serviceName.  
+	 * @return (Boolean) True if any dependencies were resolved, false otherwise.
+	*/
 	private boolean generateDependencyFolder(String serviceName, String dependencyDest) throws FileNotFoundException, IOException {
         try {
 			String filePath = "config.json";
@@ -345,3 +367,4 @@ public class Slicer {
 		return slices;
 	}
 }
+
