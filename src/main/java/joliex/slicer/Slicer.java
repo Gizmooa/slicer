@@ -25,8 +25,10 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,6 +44,10 @@ import jolie.lang.parse.ast.EmbedServiceNode;
 import jolie.lang.parse.ast.OLSyntaxNode;
 import jolie.lang.parse.ast.Program;
 import jolie.lang.parse.ast.ServiceNode;
+
+import org.json.simple.JSONArray;
+import java.io.File;
+import java.io.FileInputStream;
 
 /**
  * Slicer
@@ -139,6 +145,8 @@ public class Slicer {
 						.stream()
 						.sorted( Comparator.comparing( dep -> dep.context().line() ) )
 						.collect( Collectors.toList() );
+				System.out.println("New service");
+				System.out.println(newProgram);
 				newProgram.add( s );
 				slices.put( s.name(), new Program( program.context(), newProgram ) );
 			} );
@@ -174,7 +182,14 @@ public class Slicer {
 				pp.visit( service.getValue() );
 				os.write( pp.toString().getBytes() );
 			}
+
+			// Generate dependencies for service
+			// TODO - Needs to only do this is it has a dependency field.
+			System.out.println(serviceDir.toString());
+			boolean didItGenerateDependencies = generateDependencyFolder(service.getKey(), serviceDir.toString());
+
 			// Output Dockerfile
+			if (didItGenerateDependencies) {
 			try( OutputStream os =
 				Files.newOutputStream( serviceDir.resolve( DOCKERFILE_FILENAME ),
 					CREATE, TRUNCATE_EXISTING, WRITE ) ) {
@@ -182,12 +197,28 @@ public class Slicer {
 					"FROM jolielang/jolie%n"
 						+ "COPY %1$s .%n"
 						+ "COPY %2$s .%n"
+						+ "COPY %3$s .%n"
 						+ "CMD [\"jolie\", \"--params\", \"%2$s\", \"%1$s\"]",
 					jolieFilePath.getFileName(),
-					configPath.getFileName() );
+					configPath.getFileName(), 
+					"/lib/");
 				os.write( dfString.getBytes() );
 			}
-		}
+			} else {
+				try( OutputStream os =
+					Files.newOutputStream( serviceDir.resolve( DOCKERFILE_FILENAME ),
+						CREATE, TRUNCATE_EXISTING, WRITE ) ) {
+					String dfString = String.format(
+						"FROM jolielang/jolie%n"
+							+ "COPY %1$s .%n"
+							+ "COPY %2$s .%n"
+							+ "CMD [\"jolie\", \"--params\", \"%2$s\", \"%1$s\"]",
+						jolieFilePath.getFileName(),
+						configPath.getFileName() );
+					os.write( dfString.getBytes() );
+					}
+				}
+			}
 		// Output docker-compose
 		try( Formatter fmt =
 			new Formatter( outputDirectory.resolve( DOCKERCOMPOSE_FILENAME ).toFile() ) ) {
@@ -197,15 +228,119 @@ public class Slicer {
 
 	private void createDockerCompose( Formatter fmt ) {
 		String padding = "";
+		Boolean volumes = false;
+		ArrayList<String> volumeNameList = new ArrayList<String>();
 		fmt.format( "version: \"3.9\"%n" )
 			.format( "services:%n" );
 		for( Map.Entry< String, Program > service : slices.entrySet() ) {
 			fmt.format( "%2s%s:%n", padding, service.getKey().toLowerCase() )
 				.format( "%4s", padding )
 				.format( "build: ./%s%n", service.getKey().toLowerCase() );
+			// Get JSONObject for current service
+			JSONObject tempService = (JSONObject) config.get(service.getKey());
+			if (tempService.containsKey("database")) {
+				volumes = true;
+				volumeNameList.add(service.getKey().toLowerCase());
+				JSONObject db = (JSONObject) tempService.get("database");
+				// Look at RBDSM and generate corresponding docker-compose component
+				generateMYSQLComponent(fmt, db, service.getKey().toLowerCase());
+			}
+		}
+		if (volumes) {
+			fmt.format("volumes:%n");
+			// If any database is created, create a volume for each.
+			for (String vol : volumeNameList) {
+				String temp = vol + "-db-vol:"; // This is the format of volumes in this program, [ServiceName]-vol
+				fmt.format("  %s%n",temp);
+			}
 		}
 	}
 
+	private void generateMYSQLComponent(Formatter fmt, JSONObject db, String serviceName) {
+		fmt.format("  %s-db:%n", serviceName)
+                .format("    image: %s%n", db.get("RDBMS_IMAGE"))
+                .format("    environment:%n")
+                    .format("      MYSQL_DATABASE: \'%s\'%n", db.get("DATABASE"))
+                    .format("      MYSQL_USER: \'%s\'%n", db.get("USER"))
+                    .format("      MYSQL_PASSWORD: \'%s\'%n", db.get("PASSWORD"))
+                    .format("      MYSQL_ROOT_PASSWORD: \'%s\'%n", db.get("ROOT_PASSWORD"))
+                    .format("      ports: \'%s\'%n", "3306:3306")
+                .format("    expose:%n")
+                    .format("      - \'3306\'%n")
+                .format("    volumes:%n")
+                    .format("      - %s-db-vol:/var/lib/mysql%n", serviceName);
+	}
+
+	private boolean generateDependencyFolder(String serviceName, String dependencyDest) throws FileNotFoundException, IOException {
+        try {
+			String filePath = "config.json";
+			JSONObject o = (JSONObject) JSONValue.parse( new FileReader( filePath ) );
+			JSONObject service = (JSONObject) o.get(serviceName);
+			// TODO - This check throws an error if filename != monolith, and json != config.json
+			if (service.containsKey("dependencies")) {
+				JSONArray dependencies = (JSONArray) service.get("dependencies");
+				
+				// Get all file names inside /dependency folder
+				Path currentRelativePath = Paths.get("");
+				String path = currentRelativePath.toAbsolutePath().toString();
+				System.out.println("Current path " + path);
+				String dependenciesPath = path + "/dependencies";
+				System.out.println("dep path " + dependenciesPath);
+				File file = new File(dependenciesPath);
+				ArrayList<String> dependencyList = new ArrayList<String>(Arrays.asList(file.list()));
+	
+				// Create a directory containing all dependencies for current service
+				// called lib - This is where dependencies are placed for all jolie modules.
+				File depDir = new File((path + "/" + dependencyDest + "/lib"));
+				if (!depDir.exists()){
+					depDir.mkdirs();
+				}
+				String depDirPath = depDir.toString();
+				System.out.println("Path for dep dir" + depDirPath);
+	
+				// Copy required dependencies from this service into the service's 
+				// dependency folder created above
+				//String dependencyDir = path + "/" + dependencyDest;
+				for (int i=0; i < dependencies.size(); i++) {
+					if (dependencyList.contains(dependencies.get(i))){
+						String dependencyPath = dependenciesPath + "/" + dependencies.get(i);
+						File depSource = new File(dependencyPath);
+						File depDest = new File(depDirPath + "/" + dependencies.get(i));
+						copy(depSource, depDest);
+					}
+				}
+				return true;
+			}
+		} catch (FileNotFoundException e ) {
+			System.out.println("Exception thrown trying to parse JSON : " + e);
+		} catch (IOException e ) {
+			System.out.println("Failed trying to copy from src to dest folder : " + e);
+		}
+	return false;
+	}
+	/* 
+    Function used to copy file from one destination to another
+    https://www.java67.com/2016/09/how-to-copy-file-from-one-location-to-another-in-java.html
+    */
+    private static void copy(File src, File dest) throws IOException {
+        InputStream is = null;
+        OutputStream os = null;
+        try {
+            is = new FileInputStream(src);
+            os = new FileOutputStream(dest);
+
+            // buffer size 1K
+            byte[] buf = new byte[1024];
+
+            int bytesRead;
+            while ((bytesRead = is.read(buf)) > 0) {
+                os.write(buf, 0, bytesRead);
+            }
+        } finally {
+            is.close();
+            os.close();
+        }
+    }
 	public Map< String, Program > getSlices() {
 		return slices;
 	}
