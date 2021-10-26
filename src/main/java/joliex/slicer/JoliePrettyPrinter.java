@@ -198,8 +198,12 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	@Override
 	public void visit( RequestResponseOperationStatement n ) {
 		pp.append( n.id() )
-			.spacedParens( _0 -> n.inputVarPath().accept( this ) )
-			.spacedParens( _0 -> n.outputExpression().accept( this ) )
+			.spacedParens( _0 -> _0
+				.ifPresent(Optional.ofNullable(n.inputVarPath() ),
+					(varPath, _1 ) -> varPath.accept( this ) ) )
+			.spacedParens( _0 -> _0 
+				.ifPresent(Optional.ofNullable( n.inputVarPath() ),
+					( outExpre, _1 ) -> outExpre.accept( this ) ) )
 			.newCodeBlock( _0 -> n.process().accept( this ) );
 	}
 
@@ -437,7 +441,8 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	public void visit( Scope n ) {
 		pp.append( "scope" )
 			.space()
-			.spacedParens( _0 -> n.id() )
+			.spacedParens( _0 -> _0
+			.append(n.id()))
 			.newCodeBlock( _0 -> n.body().accept( this ) );
 	}
 
@@ -963,6 +968,7 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( ImportStatement n ) {
+		// This way of imports needs to define embedding within the service.
 		pp.append( "from" )
 			.surround(
 				PrettyPrinter::space,
