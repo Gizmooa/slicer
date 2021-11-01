@@ -200,10 +200,10 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 		pp.append( n.id() )
 			.spacedParens( _0 -> _0
 				.ifPresent(Optional.ofNullable(n.inputVarPath() ),
-					(varPath, _1 ) -> varPath.accept( this ) ) )
+					(varPath, _1 ) -> n.inputVarPath().accept(this)))
 			.spacedParens( _0 -> _0 
-				.ifPresent(Optional.ofNullable( n.inputVarPath() ),
-					( outExpre, _1 ) -> outExpre.accept( this ) ) )
+				.ifPresent(Optional.ofNullable( n.outputExpression() ),
+					( outExpre, _1 ) -> n.outputExpression().accept(this) ) )
 			.newCodeBlock( _0 -> n.process().accept( this ) );
 	}
 
