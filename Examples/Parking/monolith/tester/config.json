@@ -1,0 +1,8 @@
+{
+    "Tester": {
+        "location" : "local://T"
+    },
+    "CommandSide": {
+        "location" : "local://CS"
+    }
+}

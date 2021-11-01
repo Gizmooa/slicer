@@ -1,0 +1,13 @@
+{
+    "TodoList": {
+        "location" : "socket://localhost:8000/",
+        "database" : 
+            {
+            "RDBMS_IMAGE" : "mysql:5.7",
+            "DATABASE" : "db", 
+            "USER" : "user",
+            "PASSWORD" : "password",
+            "ROOT_PASSWORD" : "password"},
+        "dependencies" : ["jdbc-mysql.jar", "json-simple-1.1.1.jar"]
+    }
+}
