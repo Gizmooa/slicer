@@ -145,8 +145,6 @@ public class Slicer {
 						.stream()
 						.sorted( Comparator.comparing( dep -> dep.context().line() ) )
 						.collect( Collectors.toList() );
-				System.out.println("New service");
-				System.out.println(newProgram);
 				newProgram.add( s );
 				slices.put( s.name(), new Program( program.context(), newProgram ) );
 			} );
@@ -185,7 +183,7 @@ public class Slicer {
 
 			// Generate dependencies for service
 			// TODO - Needs to only do this is it has a dependency field.
-			System.out.println(serviceDir.toString());
+			//System.out.println(serviceDir.toString());
 			boolean didItGenerateDependencies = generateDependencyFolder(service.getKey(), serviceDir.toString());
 
 			// Output Dockerfile
@@ -252,7 +250,7 @@ public class Slicer {
 			fmt.format("volumes:%n");
 			// If any database is created, create a volume for each.
 			for (String vol : volumeNameList) {
-				String temp = vol + "-db-vol:"; // This is the format of volumes in this program, [ServiceName]-vol
+				String temp = vol + "-db-vol:"; // This is the format of volumes in this program, [ServiceName]-db-vol
 				fmt.format("  %s%n",temp);
 			}
 		}
@@ -305,9 +303,9 @@ public class Slicer {
 				// Get all file names inside /dependency folder
 				Path currentRelativePath = Paths.get("");
 				String path = currentRelativePath.toAbsolutePath().toString();
-				System.out.println("Current path " + path);
+				//System.out.println("Current path " + path);
 				String dependenciesPath = path + "/dependencies";
-				System.out.println("dep path " + dependenciesPath);
+				//System.out.println("dep path " + dependenciesPath);
 				File file = new File(dependenciesPath);
 				ArrayList<String> dependencyList = new ArrayList<String>(Arrays.asList(file.list()));
 	
@@ -318,7 +316,7 @@ public class Slicer {
 					depDir.mkdirs();
 				}
 				String depDirPath = depDir.toString();
-				System.out.println("Path for dep dir" + depDirPath);
+				//System.out.println("Path for dep dir" + depDirPath);
 	
 				// Copy required dependencies from this service into the service's 
 				// dependency folder created above
@@ -367,4 +365,3 @@ public class Slicer {
 		return slices;
 	}
 }
-
