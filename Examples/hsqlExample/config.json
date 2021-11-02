@@ -3,7 +3,7 @@
         "location" : "socket://localhost:8200/",
         "database" : 
             {
-            "RDBMS_IMAGE" : "mysql:5.7",
+            "RDBMS_IMAGE" : "hsql:5.7",
             "DATABASE" : "db", 
             "USER" : "user",
             "PASSWORD" : "password",
@@ -14,7 +14,7 @@
         "location" : "socket://localhost:8000/",
         "database" : 
             {
-            "RDBMS_IMAGE" : "mysql:5.7",
+            "RDBMS_IMAGE" : "hsql",
             "DATABASE" : "db", 
             "USER" : "user",
             "PASSWORD" : "password",
