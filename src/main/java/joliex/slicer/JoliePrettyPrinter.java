@@ -780,6 +780,24 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 	public void visit( TypeInlineDefinition n ) {
 		pp.onlyIf( isTopLevelTypeDeclaration, pp -> pp.append( "type" ).space() )
 			.append( n.name() )
+			.space()
+			// If max cardinality is > 1, we want it in the format [min, max]
+			.onlyIf(n.cardinality().max() > 1 && n.cardinality().max() != 2147483647, _0 -> _0
+				.spacedBrackets( _1 -> _1
+					.append(n.cardinality().min())
+					.comma()
+					.space()
+					.append(n.cardinality().max()))
+				.space())
+			// If max cardinality is equal to max int and min cardinality = 0, we want it to be in the format [min, *]
+			// Note, if users have written *, it will become [0, *] - Isn't a issue but visually different.
+			.onlyIf(n.cardinality().max() > 1 && n.cardinality().max() == 2147483647 && n.cardinality().min() == 0, _0 -> _0
+				.spacedBrackets( _1 -> _1
+					.append(n.cardinality().min())
+					.comma()
+					.space()
+					.append("*"))
+				.space())
 			.colon()
 			.space()
 			.append( n.basicType().nativeType().id() )
