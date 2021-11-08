@@ -166,6 +166,19 @@ public class Slicer {
 		throws IOException {
 		Files.createDirectories( outputDirectory );
 		for( Map.Entry< String, Program > service : slices.entrySet() ) {
+			JSONObject tempService = (JSONObject) config.get(service.getKey());
+			String port = "9999";
+			// Receive port from config file to expose that port onto this service later.
+			try {
+				String location = (String) tempService.get("location");
+				String[] parts = location.split(":");
+				port = parts[parts.length - 1].replaceAll("[^0-9]", "");
+
+			}
+			catch(Exception e) {
+				System.out.println("Location isn't found in config.json file, error trace: " + e);
+			}
+
 			JoliePrettyPrinter pp = new JoliePrettyPrinter();
 			// Create Service Directory
 			Path serviceDir = outputDirectory.resolve( service.getKey().toLowerCase() );
@@ -183,7 +196,6 @@ public class Slicer {
 
 			// Generate dependencies for service
 			// TODO - Needs to only do this is it has a dependency field.
-			//System.out.println(serviceDir.toString());
 			boolean didItGenerateDependencies = generateDependencyFolder(service.getKey(), serviceDir.toString());
 
 			// Output Dockerfile
@@ -196,10 +208,12 @@ public class Slicer {
 						+ "COPY %1$s .%n"
 						+ "COPY %2$s .%n"
 						+ "COPY %3$s .%n"
+						+ "EXPOSE %4$s %n"
 						+ "CMD [\"jolie\", \"--params\", \"%2$s\", \"%1$s\"]",
 					jolieFilePath.getFileName(),
 					configPath.getFileName(), 
-					"/lib/");
+					"/lib/",
+					port);
 				os.write( dfString.getBytes() );
 			}
 			} else {
@@ -210,9 +224,11 @@ public class Slicer {
 						"FROM jolielang/jolie%n"
 							+ "COPY %1$s .%n"
 							+ "COPY %2$s .%n"
+							+ "EXPOSE %3$s %n"
 							+ "CMD [\"jolie\", \"--params\", \"%2$s\", \"%1$s\"]",
 						jolieFilePath.getFileName(),
-						configPath.getFileName() );
+						configPath.getFileName(),
+						port );
 					os.write( dfString.getBytes() );
 					}
 				}
@@ -238,11 +254,14 @@ public class Slicer {
 			// generate database component, and add volumes.
 			JSONObject tempService = (JSONObject) config.get(service.getKey());
 			if (tempService.containsKey("database")) {
-				volumes = true;
-				volumeNameList.add(service.getKey().toLowerCase());
 				JSONObject db = (JSONObject) tempService.get("database");
 				// Look at RBDSM and generate corresponding docker-compose component
-				generateMYSQLComponent(fmt, db, service.getKey().toLowerCase());
+				// At the moment only supports mysql.
+				if (((String) db.get("RDBMS_IMAGE")).toLowerCase().contains("mysql")) {
+					volumes = true;
+					volumeNameList.add(service.getKey().toLowerCase());
+					generateMYSQLComponent(fmt, db, service.getKey().toLowerCase());
+				}
 			}
 		}
 		// If any volumes are needed, add them to docker-compose in the end of the file.
@@ -303,9 +322,7 @@ public class Slicer {
 				// Get all file names inside /dependency folder
 				Path currentRelativePath = Paths.get("");
 				String path = currentRelativePath.toAbsolutePath().toString();
-				//System.out.println("Current path " + path);
 				String dependenciesPath = path + "/dependencies";
-				//System.out.println("dep path " + dependenciesPath);
 				File file = new File(dependenciesPath);
 				ArrayList<String> dependencyList = new ArrayList<String>(Arrays.asList(file.list()));
 	
@@ -316,7 +333,6 @@ public class Slicer {
 					depDir.mkdirs();
 				}
 				String depDirPath = depDir.toString();
-				//System.out.println("Path for dep dir" + depDirPath);
 	
 				// Copy required dependencies from this service into the service's 
 				// dependency folder created above
