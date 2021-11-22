@@ -20,6 +20,7 @@
 
 package joliex.slicer;
 
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,6 +33,10 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
+
 import jolie.lang.Constants;
 import jolie.lang.parse.UnitOLVisitor;
 import jolie.lang.parse.ast.AddAssignStatement;
@@ -558,16 +563,46 @@ public class JoliePrettyPrinter implements UnitOLVisitor {
 
 	@Override
 	public void visit( OutputPortInfo n ) {
+		// Temps for the try-catch
+		JSONObject o = null;
+		JSONObject service = null;
+		String tempLoc = "";
+		String filePath = "docker-config.json";
+		/*
+		TODO - Not the most effecient way of getting the information from docker-config.json
+		as this can be loaded in at runtime. For now this is fine as this code is only run once per output port,
+		but for future optimizations this should be loaded in a constructor or something similar.
+		*/
+		try {
+			o = (JSONObject) JSONValue.parse( new FileReader( filePath ) );
+			if (o.containsKey(n.id())) {
+				service = (JSONObject) o.get(n.id());
+				tempLoc = (String) service.get("location");
+			}
+		} catch (Exception e) {
+			System.out.println("[?] Tried loading json file " + filePath + " if any output ports are going to external services they need to be specified within a 'docker-config.json' file. " + e);
+		}
+		// If the name of the service is in docker-config.json, then it is an external source
+		// and the sliced program should use a docker location. 
+		Boolean isOutputLocationExternal = o.containsKey(n.id());
+		String location = tempLoc;
+
 		pp.append( "outputPort" )
 			.space()
 			.append( n.id() )
 			.space()
-			.newCodeBlock( _0 -> _0
+			.newCodeBlock( _0 -> _0	
 				.onlyIf( n.location() != null, _1 -> _1
 					.append( "location" )
 					.colon()
 					.space()
-					.run( _2 -> n.location().accept( this ) )
+					// If the output port is specified in the docker-compose.config
+					// it should be using the port written in there as the service's output location
+					// is an external service.
+					.onlyIf( isOutputLocationExternal, _2 -> _2
+						.append("\"" + location + "\"") )
+					.onlyIf(!isOutputLocationExternal, _2 -> _2
+						.run( _3 -> n.location().accept( this ) ) )
 					.newline() )
 				.onlyIf( n.protocol() != null, _1 -> _1
 					.append( "protocol" )
