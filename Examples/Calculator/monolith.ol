@@ -93,7 +93,7 @@ service AdvancedCalculatorService {
     execution: concurrent
 
     outputPort Calculator {
-         location: "socket://localhost:8000"
+         location: "socket://calculatorservice:8000"
          protocol: http { format = "json" }
          interfaces: CalculatorInterface
     }
