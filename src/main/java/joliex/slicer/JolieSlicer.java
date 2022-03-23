@@ -28,7 +28,12 @@ import jolie.lang.parse.OLParser;
 import jolie.lang.parse.ParserException;
 import jolie.lang.parse.Scanner;
 import jolie.lang.parse.SemanticVerifier;
+import jolie.lang.parse.ast.EmbedServiceNode;
+import jolie.lang.parse.ast.InputPortInfo;
+import jolie.lang.parse.ast.OLSyntaxNode;
+import jolie.lang.parse.ast.OutputPortInfo;
 import jolie.lang.parse.ast.Program;
+import jolie.lang.parse.ast.ServiceNode;
 import jolie.lang.parse.module.ModuleException;
 import jolie.lang.parse.util.ParsingUtils;
 import jolie.runtime.FaultException;
@@ -36,6 +41,7 @@ import jolie.runtime.JavaService;
 import jolie.runtime.Value;
 import jolie.runtime.embedding.RequestResponse;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -102,6 +108,15 @@ public class JolieSlicer extends JavaService {
 				semVerConfig,
 				INCLUDE_DOCUMENTATION );
             
+            // Perform disembedding if slices.config are present
+            String slicesConfigPath = "slices.config";
+            boolean slicesConfigExists = new File(slicesConfigPath).exists();
+            if (slicesConfigExists){
+                MonolithDisembedder md = new MonolithDisembedder(program, configPath, slicesConfigPath);
+                md.makeProgramDockerReady();
+                program = md.p;
+            }              
+
             /*
             final Scanner scanner = new Scanner(stream, programDirectory.toUri(), null, INCLUDE_DOCUMENTATION);
             final OLParser olParser = new OLParser(scanner, EMPTY_INCLUDE_PATHS, CLASS_LOADER);
