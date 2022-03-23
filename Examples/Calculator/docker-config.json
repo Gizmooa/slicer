@@ -1,5 +1,0 @@
-{
-    "Calculator": {
-        "location" : "socket://calculatorservice:8000"
-    }
-}

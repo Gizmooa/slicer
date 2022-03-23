@@ -1,8 +1,0 @@
-{
-    "CalculatorService": {
-        "location" : "socket://localhost:8000/"
-    },
-    "AdvancedCalculatorService": {
-        "location" : "socket://localhost:8001/"
-    }
-}
