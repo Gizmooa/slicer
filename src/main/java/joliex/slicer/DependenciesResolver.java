@@ -66,6 +66,13 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 	@Override
 	public Set< OLSyntaxNode > visit( Program n, Unit ctx ) {
 		Set< OLSyntaxNode > dependencies = new HashSet<>();
+		for (OLSyntaxNode child : n.children()) {
+			if (child instanceof EmbedServiceNode) {
+				EmbedServiceNode embed = (EmbedServiceNode) child;
+			}
+			dependencies.addAll(child.accept(this));
+		}
+
 		n.children().forEach( c -> dependencies.addAll( c.accept( this ) ) );
 		return dependencies;
 	}
@@ -581,8 +588,9 @@ public class DependenciesResolver implements OLVisitor< Unit, Set< OLSyntaxNode 
 		} else {
 			// The service name is not imported. It refers to a ServiceNode declared in this program
 			assert declDependencies.containsKey( n.service() );
-			return n.service().accept( this );
+			Set< OLSyntaxNode > dependencies = new HashSet<>( n.service().accept( this ) );
+			dependencies.add( n.service() );
+			return dependencies;
 		}
 	}
 }
-
