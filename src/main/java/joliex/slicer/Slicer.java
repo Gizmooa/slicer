@@ -41,6 +41,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
 import jolie.lang.parse.ast.EmbedServiceNode;
+import jolie.lang.parse.ast.InputPortInfo;
 import jolie.lang.parse.ast.OLSyntaxNode;
 import jolie.lang.parse.ast.Program;
 import jolie.lang.parse.ast.ServiceNode;
@@ -166,18 +167,25 @@ public class Slicer {
 		throws IOException {
 		Files.createDirectories( outputDirectory );
 		for( Map.Entry< String, Program > service : slices.entrySet() ) {
-			JSONObject tempService = (JSONObject) config.get(service.getKey());
-			String port = "9999";
-			// Receive port from config file to expose that port onto this service later.
-			try {
-				String location = (String) tempService.get("location");
-				String[] parts = location.split(":");
-				port = parts[parts.length - 1].replaceAll("[^0-9]", "");
-
-			}
-			catch(Exception e) {
-				System.out.println("Location isn't found in config.json file, error trace: " + e);
-			}
+			// Iterate over the program, find the root service of the program w.r.t to the hashmap key
+			// find the input port not equal to local and find the exposing port.
+			final List<String> ports = new ArrayList<>();
+			service.getValue().children().stream()
+				.filter( ServiceNode.class::isInstance )
+				.map( ServiceNode.class::cast )
+				.forEach( serviceNode -> {
+					if(serviceNode.name().equals(service.getKey())){
+						serviceNode.program().children().stream().filter( InputPortInfo.class::isInstance )
+						.map( InputPortInfo.class::cast ).forEach((ip) -> {
+							if(!ip.location().toString().equals("local")){
+								String[] parts = ip.location().toString().split(":");
+								String port = parts[parts.length - 1].replaceAll("[^0-9]", "");
+								ports.add(port);
+							}
+						});
+					}
+				});
+			String port = ports.get(0);
 
 			JoliePrettyPrinter pp = new JoliePrettyPrinter();
 			// Create Service Directory
@@ -209,11 +217,12 @@ public class Slicer {
 						+ "COPY %2$s .%n"
 						+ "COPY %3$s .%n"
 						+ "EXPOSE %4$s %n"
-						+ "CMD [\"jolie\", \"--params\", \"%2$s\", \"%1$s\"]",
+						+ "CMD [\"jolie\", \"--params\", \"%2$s\",\"--service\", \"%3$s\", \"%1$s\"]",
 					jolieFilePath.getFileName(),
 					configPath.getFileName(), 
 					"/lib/",
-					port);
+					port,
+					service.getKey());
 				os.write( dfString.getBytes() );
 			}
 			} else {
@@ -225,10 +234,11 @@ public class Slicer {
 							+ "COPY %1$s .%n"
 							+ "COPY %2$s .%n"
 							+ "EXPOSE %3$s %n"
-							+ "CMD [\"jolie\", \"--params\", \"%2$s\", \"%1$s\"]",
+							+ "CMD [\"jolie\", \"--params\", \"%2$s\", \"--service\", \"%4$s\",  \"%1$s\"]",
 						jolieFilePath.getFileName(),
 						configPath.getFileName(),
-						port );
+						port, 
+						service.getKey() );
 					os.write( dfString.getBytes() );
 					}
 				}
