@@ -39,7 +39,7 @@ public class MonolithDisembedder {
     static int amountOfEmbeds = 0;
     static JSONObject slicesConfig = null;
     static HashMap<String, ServiceNode> newServices = new HashMap<>(); 
-    static HashMap<ServiceNode, OutputPortInfo> danglingEmbedOPs = new HashMap<>();
+    static HashMap<OutputPortInfo, ServiceNode> danglingEmbedOPs = new HashMap<>();
 
     public MonolithDisembedder(Program p, Path configPath, String slicesConfigPath) throws FileNotFoundException {
         MonolithDisembedder.p = p;
@@ -80,8 +80,8 @@ public class MonolithDisembedder {
         }
 
 		// Remove disembedded embed generated OP's
-        for (Map.Entry<ServiceNode, OutputPortInfo> entry : danglingEmbedOPs.entrySet()) {
-            entry.getKey().program().children().remove(entry.getValue());
+        for (Map.Entry< OutputPortInfo, ServiceNode> entry : danglingEmbedOPs.entrySet()) {
+            entry.getValue().program().children().remove(entry.getKey());
         }
 
 		// Fix all output ports TODO
@@ -179,8 +179,9 @@ public class MonolithDisembedder {
         EmbedServiceNode embeddedService = (EmbedServiceNode) embed;
         InputPortInfo embeddedServicesIP = findFirstNonLocalIP(embeddedService.service());
         OutputPortInfo opReplacementForEmbed = createOPFromIP(embeddedServicesIP, (EmbedServiceNode) embed);
+
         int indexForEmbed = service.program().children().indexOf(embed);
-        danglingEmbedOPs.put(service, embeddedService.bindingPort());
+        danglingEmbedOPs.put( embeddedService.bindingPort(), service);
         service.program().children().set(indexForEmbed, opReplacementForEmbed);
     }
 
@@ -194,8 +195,9 @@ public class MonolithDisembedder {
 			opReplacementForEmbed.location().toString().replace(embeddedService.serviceName().toLowerCase(), newServiceName).toLowerCase());
 		
 		opReplacementForEmbed.setLocation(newLocation);
+
         int indexForEmbed = service.program().children().indexOf(embed);
-        danglingEmbedOPs.put(service, embeddedService.bindingPort());
+        danglingEmbedOPs.put( embeddedService.bindingPort(), service);
         service.program().children().set(indexForEmbed, opReplacementForEmbed);
     }
 
