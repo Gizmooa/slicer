@@ -59,9 +59,19 @@ public class JolieSlicer extends JavaService {
 
     @RequestResponse
     public void slice( Value request ) throws FaultException {
-
         final Path programPath = Path.of( request.getFirstChild( "program" ).strValue() );
-        final Path configPath = Path.of( request.getFirstChild( "config" ).strValue() );
+        final Path visualize = Path.of( request.getFirstChild( "visualize" ).strValue() );
+        final Path disembedConfig = Path.of( request.getFirstChild( "disembedConfig" ).strValue() );
+        // If there are no config given, we will create one at the path config.json.
+        // This is because the program can be called without a config, but with a slices.config instead
+        // where the config will be generated.
+        final Path configPath;
+        if (request.getFirstChild( "config" ).strValue().equals("")){
+            configPath = Path.of("config.json");
+        }
+        else{
+            configPath = Path.of( request.getFirstChild( "config" ).strValue() );
+        }
         final Path outputDirectory;
         if( request.hasChildren( "outputDirectory" ) ) {
             outputDirectory = Path.of(request.getFirstChild( "outputDirectory" ).strValue() );
@@ -107,15 +117,21 @@ public class JolieSlicer extends JavaService {
 				intConf.constants(),
 				semVerConfig,
 				INCLUDE_DOCUMENTATION );
-            
-            // Perform disembedding if slices.config are present
-            String slicesConfigPath = "slices.config";
-            boolean slicesConfigExists = new File(slicesConfigPath).exists();
-            if (slicesConfigExists){
-                MonolithDisembedder md = new MonolithDisembedder(program, configPath, slicesConfigPath);
+
+            // Perform disembedding if disembed argument are given.
+            if (!disembedConfig.toString().equals("")){
+                MonolithDisembedder md = new MonolithDisembedder(program, configPath, disembedConfig.toString());
                 md.makeProgramDockerReady();
                 program = md.p;
-            }              
+            }      
+            
+            // If the visualize arg is true, create the DOT file and terminate.
+            if (!visualize.toString().equals("")){
+                Visualizer visualizer = new Visualizer(program, visualize.toString());
+                visualizer.matchEndPoints();
+                visualizer.generateDotFile();
+                System.exit(0);
+            }
 
             /*
             final Scanner scanner = new Scanner(stream, programDirectory.toUri(), null, INCLUDE_DOCUMENTATION);
