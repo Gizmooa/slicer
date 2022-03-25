@@ -5,7 +5,9 @@ from file import FileNotFoundType
 
 type SliceRequest: void {
 	program: string
-	config: string
+	config?: string
+	disembedConfig?: string
+	visualize?: string
 	outputDirectory? : string
 }
 

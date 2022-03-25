@@ -57,6 +57,12 @@ service Main {
 						request.config = launcherRequest.args[++i]
 					} else if ( launcherRequest.args[i] == "--output" || launcherRequest.args[i] == "-o" ) {
 						request.outputDirectory = launcherRequest.args[++i]
+						
+					} else if ( launcherRequest.args[i] == "--visualize" || launcherRequest.args[i] == "-v" ) {
+						request.visualize = launcherRequest.args[++i]
+						
+					} else if ( launcherRequest.args[i] == "--disembedConfig" || launcherRequest.args[i] == "-dc" ) {
+						request.disembedConfig = launcherRequest.args[++i]
 					} else {
 						startsWith@stringUtils( launcherRequest.args[i] { prefix = "-" } )( isAnOption )
 						if( isAnOption ) {
@@ -67,7 +73,8 @@ service Main {
 					}
 					++i
 				}
-				if( !is_defined(request.config) || !is_defined(request.program) ) {
+				if( !(is_defined(request.config) || is_defined(request.visualize) || 
+					is_defined(request.disembedConfig)) || !is_defined(request.program) ) {
 					throw( MissingArgument, "An argument is missing" )
 				}
 				// Here we receive java exceptions from the slicer, so we print the stack trace instead
