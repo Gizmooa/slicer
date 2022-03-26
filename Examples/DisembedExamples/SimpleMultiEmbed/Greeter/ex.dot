@@ -1,0 +1,9 @@
+digraph G {
+	Main -> Greeter; 
+	Main -> Console; 
+	Greeter -> Console; 
+	SecondMain -> Console; 
+	GreeterBySecondMain -> Console; 
+	Main -> SecondMain[ label= "socket://secondmain:8100" color="blue"];
+	SecondMain -> GreeterBySecondMain[ label= "socket://greeterbysecondmain:5601" color="blue"];
+}

@@ -1,0 +1,1 @@
+In this folder we'll be discussing examples where there are valid problems in terms of the graph, but not necesarily for an actual program. Abstracting the problem to graphs grants many benefits, but some issues w.r.t one might find difficult slicing cases in the graph. But this graph might not be a valid program in the first place, some of these examples will be shown here. 

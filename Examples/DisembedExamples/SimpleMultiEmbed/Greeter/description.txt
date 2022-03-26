@@ -1,0 +1,1 @@
+A simple greeter app, here SecondMain have a non-local location before slicing. Simply to show that it will use the existing port if there are one, otherwise it will generate a new one starting from 5601.

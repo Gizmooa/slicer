@@ -1,0 +1,8 @@
+{
+    "Main": {
+        "location" : "socket://localhost:8082/"
+    },
+    "SecondMain": {
+        "location" : "socket://localhost:8100/"
+    }
+}

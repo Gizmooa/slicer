@@ -1,0 +1,6 @@
+digraph G {
+	UserService -> Database; 
+	UserService -> Console; 
+	UserService -> StringUtils; 
+	GatewayService -> UserService[ label= "socket://userservice:8000/" color="blue"];
+}

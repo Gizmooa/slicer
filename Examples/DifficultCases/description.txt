@@ -1,0 +1,1 @@
+This folder will contain multiple projects having some difficulties, and describing why these things are issues within every folder. The primary issue is concerning service params, mostly dynamic.

@@ -1,0 +1,2 @@
+If a service are multi-embedded, and it have a child that have a non-local IP it will throw an error because it will spin up two services on the same IP.
+One have to remember all services under a multi-embed will also be embedded multiple times.

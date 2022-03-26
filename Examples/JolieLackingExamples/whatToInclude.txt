@@ -1,0 +1,5 @@
+The way imports are made, they should be in the form “Include X.ol” to work, otherwise it will not work containerized.
+
+Embeddings cannot be named the same, otherwise they will refer to the same service
+
+OP's cannot be named the same if it is an embedded service. Otherwise the embedded service will use the embedder's OP instead of its own. 

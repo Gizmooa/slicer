@@ -1,0 +1,1 @@
+{"UserService":{"dependencies":["hsqldb.jar","json-simple-1.1.1.jar"]},"GatewayService":{"location":""}}

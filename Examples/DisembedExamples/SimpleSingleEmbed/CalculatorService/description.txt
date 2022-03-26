@@ -1,0 +1,1 @@
+This is a small dummy example taken from jolie docs (https://docs.jolie-lang.org/v1.10.x/tutorials/using-more-than-one-dependency/) with some small adjustments to make it a monolith. Only testing the functionality and if the program works after slicing.

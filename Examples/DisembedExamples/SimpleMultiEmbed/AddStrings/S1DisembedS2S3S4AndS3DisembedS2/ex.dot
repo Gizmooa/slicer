@@ -1,0 +1,13 @@
+digraph G {
+	Service1 -> Console; 
+	Service2 -> Console; 
+	Service3 -> Console; 
+	Service4 -> Console; 
+	Service4 -> Service2; 
+	Service2ByService1 -> Console; 
+	Service2ByService3 -> Console; 
+	Service1 -> Service2ByService1[ label= "socket://service2byservice1:5602" color="blue"];
+	Service1 -> Service3[ label= "socket://service3:5603" color="blue"];
+	Service1 -> Service4[ label= "socket://service4:5604" color="blue"];
+	Service3 -> Service2ByService3[ label= "socket://service2byservice3:5601" color="blue"];
+}

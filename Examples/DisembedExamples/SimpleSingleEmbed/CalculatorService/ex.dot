@@ -1,0 +1,3 @@
+digraph G {
+	AdvancedCalculatorService -> CalculatorService[ label= "socket://calculatorservice:5601" color="blue"];
+}

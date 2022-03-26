@@ -1,0 +1,1 @@
+For this example, as no slices/disembeds are defined. We will have to provide a config.json describing what the main services are. Here only Service1 will be a seperate service.
