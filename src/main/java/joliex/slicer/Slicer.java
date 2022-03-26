@@ -59,16 +59,18 @@ public class Slicer {
 	final Path outputDirectory;
 	final JSONObject config;
 	final DependenciesResolver dependenciesResolver;
+	final HashMap<String, ArrayList<String>> dependsOn;
 	Map< String, Program > slices = null;
 
 	static final String DOCKERFILE_FILENAME = "Dockerfile";
 	static final String DOCKERCOMPOSE_FILENAME = "docker-compose.yml";
 
-	private Slicer( Program p, Path configPath, Path outputDirectory )
+	private Slicer( Program p, Path configPath, Path outputDirectory, HashMap<String, ArrayList<String>> dependsOn )
 		throws FileNotFoundException, InvalidConfigurationFileException {
 		this.program = p;
 		this.configPath = configPath;
 		this.outputDirectory = outputDirectory;
+		this.dependsOn = dependsOn;
 		Object o = JSONValue.parse( new FileReader( configPath.toFile() ) );
 		if( !(o instanceof JSONObject) ) {
 			String msg = "Top level definition must be a json object";
@@ -83,9 +85,9 @@ public class Slicer {
 		this.dependenciesResolver = new DependenciesResolver( p );
 	}
 
-	public static Slicer create( Program p, Path configPath, Path outputDirectory )
+	public static Slicer create( Program p, Path configPath, Path outputDirectory, HashMap<String, ArrayList<String>> dependsOn )
 		throws FileNotFoundException, InvalidConfigurationFileException {
-		Slicer slicer = new Slicer( p, configPath, outputDirectory );
+		Slicer slicer = new Slicer( p, configPath, outputDirectory, dependsOn );
 		slicer.sliceProgram();
 		return slicer;
 	}
@@ -217,7 +219,7 @@ public class Slicer {
 						+ "COPY %2$s .%n"
 						+ "COPY %3$s .%n"
 						+ "EXPOSE %4$s %n"
-						+ "CMD [\"jolie\", \"--params\", \"%2$s\",\"--service\", \"%3$s\", \"%1$s\"]",
+						+ "CMD [\"jolie\", \"--params\", \"%2$s\",\"--service\", \"%5$s\", \"%1$s\"]",
 					jolieFilePath.getFileName(),
 					configPath.getFileName(), 
 					"/lib/",
@@ -250,6 +252,20 @@ public class Slicer {
 		}
 	}
 
+	private String dependsOnString(String key){
+		String dependsOnString = "";
+		if(dependsOn == null){
+			return "";
+		}
+		if (dependsOn.containsKey(key)){
+			dependsOnString = "    depends_on:\n";
+			for (String dependsDependency : dependsOn.get(key)){
+				dependsOnString = dependsOnString + "      - "+dependsDependency.toLowerCase()+"\n";
+			}
+		}
+		return dependsOnString;
+	}
+
 	private void createDockerCompose( Formatter fmt ) {
 		String padding = "";
 		Boolean volumes = false;
@@ -259,7 +275,9 @@ public class Slicer {
 		for( Map.Entry< String, Program > service : slices.entrySet() ) {
 			fmt.format( "%2s%s:%n", padding, service.getKey().toLowerCase() )
 				.format( "%4s", padding )
-				.format( "build: ./%s%n", service.getKey().toLowerCase() );
+				.format( "build: ./%s%n", service.getKey().toLowerCase())
+				// Write any dependencies in terms of the service depending on services
+				.format("%s", dependsOnString(service.getKey()));
 			// If config for current service have defined a database component
 			// generate database component, and add volumes.
 			JSONObject tempService = (JSONObject) config.get(service.getKey());

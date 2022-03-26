@@ -48,6 +48,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.stream.Stream;
 
 
@@ -119,17 +120,29 @@ public class JolieSlicer extends JavaService {
 				INCLUDE_DOCUMENTATION );
 
             // Perform disembedding if disembed argument are given.
+            MonolithDisembedder md = null;
+            HashMap<String, ArrayList<String>> dependsOn = null;
             if (!disembedConfig.toString().equals("")){
-                MonolithDisembedder md = new MonolithDisembedder(program, configPath, disembedConfig.toString());
+                md = new MonolithDisembedder(program, configPath, disembedConfig.toString());
                 md.makeProgramDockerReady();
                 program = md.p;
-            }      
+                dependsOn = MonolithDisembedder.dependsOn;
+            }
             
             // If the visualize arg is true, create the DOT file and terminate.
             if (!visualize.toString().equals("")){
-                Visualizer visualizer = new Visualizer(program, visualize.toString());
-                visualizer.matchEndPoints();
-                visualizer.generateDotFile();
+                Visualizer visualizer;
+                if(md != null && md.visualizeHelper.size() == 0){
+                    visualizer = new Visualizer(program, visualize.toString());
+                    visualizer.matchEndPoints();
+                    visualizer.generateDotFile();
+                }
+                else{
+                    visualizer = new Visualizer(program, visualize.toString(), md.visualizeHelper);
+                    visualizer.matchEndPoints();
+                    visualizer.generateDotFile();
+                }
+
                 System.exit(0);
             }
 
@@ -141,7 +154,8 @@ public class JolieSlicer extends JavaService {
             final Slicer slicer = Slicer.create(
                     program,
                     configPath,
-                    outputDirectory);
+                    outputDirectory,
+                    dependsOn);
 
             slicer.generateServiceDirectories();
 

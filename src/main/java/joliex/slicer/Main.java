@@ -21,6 +21,8 @@
 package joliex.slicer;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import jolie.Interpreter;
@@ -68,11 +70,12 @@ public class Main {
 				INCLUDE_DOCUMENTATION );
 
 
-
+			HashMap<String, ArrayList<String>> dependsOn = null;
 			Slicer slicer = Slicer.create(
 				program,
 				cmdLnParser.getConfigFile(),
-				cmdLnParser.getOutputDirectory() );
+				cmdLnParser.getOutputDirectory(),
+				dependsOn );
 
 			Map< String, Program > slices = slicer.getSlices();
 

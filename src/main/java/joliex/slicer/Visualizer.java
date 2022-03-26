@@ -3,14 +3,16 @@ package joliex.slicer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.Provider.Service;
 
 import jolie.lang.parse.ast.EmbedServiceNode;
 import jolie.lang.parse.ast.Program;
 import jolie.lang.parse.ast.ServiceNode;
+import jolie.runtime.expression.InlineTreeExpression;
 import jolie.lang.parse.ast.InputPortInfo;
 import jolie.lang.parse.ast.OutputPortInfo;
 
@@ -19,9 +21,16 @@ public class Visualizer {
     String dotFileName;
     static List<Edge> EmbedEdges = new ArrayList<>();
     static List<ConnectivityEdge> ConnectivityEdges = new ArrayList<>();
+    static HashMap<String, ArrayList<ServiceNode>> helperMap = new HashMap<>();
     public Visualizer(Program p, String dotFileName){
         Visualizer.p = p;
         this.dotFileName = dotFileName;
+    }
+
+    public Visualizer(Program p, String dotFileName, HashMap<String, ArrayList<ServiceNode>> helperMap){
+        Visualizer.p = p;
+        this.dotFileName = dotFileName;
+        Visualizer.helperMap = helperMap;
     }
 
     // Used to match endpoints, aka IP and OP of services
@@ -40,7 +49,11 @@ public class Visualizer {
                     .stream()
                     .filter( InputPortInfo.class::isInstance )
                     .map( InputPortInfo.class::cast )
-                    .forEach(inputPort -> inputPorts.put(inputPort.location().toString().replaceAll("localhost", service.name().toLowerCase()), service)));
+                    .forEach(inputPort -> {
+                        // Add both the docker-input version and the normal.
+                        inputPorts.put(inputPort.location().toString().replaceAll("localhost", service.name().toLowerCase()), service);
+                        inputPorts.put(inputPort.location().toString(), service);
+                    }));
         
         // Fill the list of connectivity edges
         p.children()
@@ -65,6 +78,23 @@ public class Visualizer {
                         }
                     }));
 
+        // Create connectivity edges from the helper list from Monolithic Disembedder if exist
+        if (helperMap.size() > 0){
+            for (Map.Entry<String, ArrayList<ServiceNode>> entry : helperMap.entrySet()) {
+                Boolean inList = false;
+                // Make sure the connectivity isnt already in the list.
+                for (ConnectivityEdge edge : ConnectivityEdges) {
+                    if (edge.getLocation().equals(entry.getKey())) {
+                        inList = true;
+                    }
+                }
+                ConnectivityEdge newConEdge = new ConnectivityEdge(entry.getValue().get(1), entry.getValue().get(0), entry.getKey());
+                if (!inList){
+                    ConnectivityEdges.add(newConEdge);
+                }
+            }
+        }
+
         // Fill the list of embed edges
         p.children()
             .stream()
@@ -78,6 +108,7 @@ public class Visualizer {
                     .filter( EmbedServiceNode.class::isInstance )
                     .map( EmbedServiceNode.class::cast )
                     .forEach(embed -> EmbedEdges.add(new Edge(service, embed.service()))));
+                    
     }
 
     public void generateDotFile(){
@@ -113,7 +144,7 @@ public class Visualizer {
             if (myObj.createNewFile()) {
                 System.out.println("File created: " + myObj.getName());
             } else {
-                System.out.println("File already exists. Deleting and creating it from new. ");
+                System.out.println("File " + dotFileName + " already exists. Deleting and creating it from new. ");
                 if (myObj.delete()) { 
                     myObj.createNewFile();
                 } else {

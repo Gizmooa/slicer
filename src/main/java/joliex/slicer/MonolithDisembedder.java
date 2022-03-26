@@ -3,6 +3,7 @@ package joliex.slicer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,6 +13,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.security.Provider.Service;
 
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -36,10 +38,13 @@ public class MonolithDisembedder {
 	static int newPort = 5601;
     // Embeddings: key=Service getting embedded, value=services embedding the key service
 	static HashMap<String, ArrayList<String>> embeddings = new HashMap<>();
+    static HashMap<String, ArrayList<ServiceNode>> visualizeHelper = new HashMap<>();
     static int amountOfEmbeds = 0;
     static JSONObject slicesConfig = null;
     static HashMap<String, ServiceNode> newServices = new HashMap<>(); 
     static HashMap<OutputPortInfo, ServiceNode> danglingEmbedOPs = new HashMap<>();
+    // depends on: Key = service, value = services the key service depends on
+    static HashMap<String, ArrayList<String>> dependsOn = new HashMap<>();
 
     public MonolithDisembedder(Program p, Path configPath, String slicesConfigPath) throws FileNotFoundException {
         MonolithDisembedder.p = p;
@@ -52,13 +57,6 @@ public class MonolithDisembedder {
     public void makeProgramDockerReady() throws FileNotFoundException {
         // Generate the embed pointers
         generateEmbedArray();
-
-        // Add non-local if needed
-        p.children()
-            .stream()
-            .filter( ServiceNode.class::isInstance )
-            .map( ServiceNode.class::cast )
-            .forEach(MonolithDisembedder::addNonLocalIPIfNeeded);
 
         // Disembed the embedded service and add proxy service if needed to hashmap
         p.children()
@@ -84,20 +82,127 @@ public class MonolithDisembedder {
             entry.getValue().program().children().remove(entry.getKey());
         }
 
-		// Fix all output ports TODO
+		// Fix all output ports.
+        // If multiple docker parents for a service we will write the location [Service1 | Service2]:PORT
+        p.children()
+            .stream()
+            .filter( ServiceNode.class::isInstance )
+            .map( ServiceNode.class::cast )
+            .forEach(MonolithDisembedder::fixOutputPorts);
 
-		// Rewrite the config file w.r.t the slicing
+		// Rewrite the config file w.r.t the disembedding
 		rewriteConfigFile();
     }
 
-    private static void addNonLocalIPIfNeeded( ServiceNode service ){
+    private static void fixOutputPorts(ServiceNode service){
+        service.program()
+            .children()
+            .stream()
+            .filter( OutputPortInfo.class::isInstance )
+            .map( OutputPortInfo.class::cast )
+            .forEach(op -> {
+                if(op.location() != null && op.location().toString().contains("localhost")){
+                    matchAndFixOutputPort(service, op);
+                }
+            });
+    }
+
+    // Matches the op of the service with an IP; and fixes the OP corresponding to the IP of the match.
+    private static void matchAndFixOutputPort(ServiceNode currentService, OutputPortInfo op){
+        HashMap<String, ServiceNode> inputPorts = new HashMap<>();
+        ArrayList<String> rootNodes = getRootNodes();
+
+        // Fill the InputPort -> ServiceNode hashmap
+        p.children()
+            .stream()
+            .filter( ServiceNode.class::isInstance )
+            .map( ServiceNode.class::cast )
+            .forEach( service ->
+                service
+                    .program()
+                    .children()
+                    .stream()
+                    .filter( InputPortInfo.class::isInstance )
+                    .map( InputPortInfo.class::cast )
+                    .forEach(inputPort -> {
+                        inputPorts.put(inputPort.location().toString(), service);
+                    }));
+        
+        p.children()
+            .stream()
+            .filter( ServiceNode.class::isInstance )
+            .map( ServiceNode.class::cast )
+            .forEach( service ->
+                service
+                    .program()
+                    .children()
+                    .stream()
+                    .filter( OutputPortInfo.class::isInstance )
+                    .map( OutputPortInfo.class::cast )
+                    .forEach(outputPort -> {
+                        for (String key : inputPorts.keySet()){
+                            // Ignore the embed generated OPs
+                            if (outputPort.location() != null){
+                                if(key.equals(outputPort.location().toString())){
+                                    String ipParent = findParent(inputPorts.get(key).name(), rootNodes);
+                                    String opParent = findParent(currentService.name(), rootNodes);
+                                    // TODO - Maybe add a depends_on dependency here for the op parent
+                                    if (dependsOn.containsKey(opParent)){
+                                        dependsOn.get(opParent).add(ipParent);
+                                    }
+                                    else{
+                                        ArrayList<String> node = new ArrayList<>();
+                                        node.add(ipParent);
+                                        dependsOn.put(opParent, node);
+                                    }
+                                    // If the parents are equal, keep the adress. Otherwise swap localhost with the ip's parent node aka the docker location
+                                    if (!ipParent.equals(opParent)){
+                                        String newOutputPort = outputPort.location().toString().replace("localhost", ipParent.toLowerCase());
+                                        ArrayList<ServiceNode> visualizeHelperList = new ArrayList<>();
+                                        visualizeHelperList.add(inputPorts.get(key));
+                                        visualizeHelperList.add(currentService);
+                                        visualizeHelper.put(newOutputPort, visualizeHelperList);
+                                        ConstantStringExpression newLocation = new ConstantStringExpression(outputPort.location().context(), 
+                                                                                    newOutputPort);
+                                        outputPort.setLocation(newLocation);
+                                    }
+                                }
+                            }
+                        }
+                    }));
+        
+    }
+
+    public static String findParent(String serviceName, ArrayList<String> rootNodes){
+        if (rootNodes.contains(serviceName)){
+            return serviceName;
+        }
+        if (embeddings.get(serviceName).size() == 1){
+            return embeddings.get(serviceName).get(0);
+        }
+        else{
+            String embedString = "[";
+            String lastElement = embeddings.get(serviceName).get(embeddings.get(serviceName).size());
+            for (String embed : embeddings.get(serviceName)){
+                if (embed == lastElement){
+                    embedString = embedString + embed + "]";
+                }
+                else{
+                    embedString = embedString + embed + " | ";
+                }
+            }
+            return embedString;
+        }
+    }
+
+    private static void addNonLocalIPIfNeeded( ServiceNode service, String actualServiceName ){
         // Check if the service should be disembedded
         Set<String> keys = slicesConfig.keySet();
         for (String key : keys){
             ArrayList<String> values = (ArrayList) slicesConfig.get(key);
             // If it should be disembedded, add a non-local ip if the service doesnt own one
             // and replace the local with non-local.
-            if (values.contains(service.name())){
+            if (values.contains(actualServiceName)){
                 Iterator<InputPortInfo> ipIterator = service.program().children()
                     .stream()
                     .filter( InputPortInfo.class::isInstance )
@@ -243,11 +348,33 @@ public class MonolithDisembedder {
                 int amountOfEmbeds = embeddings.containsKey(service.name()) ? embeddings.get(service.name()).size() : 0;
                 if (amountOfEmbeds > 1) {
                     disembedTheEmbeddedMulti(service, key);
+                    // The sliced service will now be a dependency before the embedder can start in docker
+                    if (dependsOn.containsKey(key)){
+                        dependsOn.get(key).add(service.name()+"By"+key);
+                    }
+                    else{
+                        ArrayList<String> node = new ArrayList<>();
+                        node.add(service.name()+"By"+key);
+                        dependsOn.put(key, node);
+                    }
+                    // Remove the embed pointer towards the service
                     ArrayList<String> embedList = embeddings.get(service.name());
                     embedList.remove(key);
                     embeddings.put(service.name(), embedList);
                 }
 				else{
+                    // As we are disembedding, if the service doesn't have a non-local adress, add it.
+                    addNonLocalIPIfNeeded(service, service.name());
+                    // The sliced service will now be a dependency before the embedder can start in docker
+                    if (dependsOn.containsKey(key)){
+                        dependsOn.get(key).add(service.name());
+                    }
+                    else{
+                        ArrayList<String> node = new ArrayList<>();
+                        node.add(service.name());
+                        dependsOn.put(key, node);
+                    }
+                    // Remove the embed pointer towards the service
 					ArrayList<String> embedList = embeddings.get(service.name());
                     embedList.remove(key);
                     embeddings.put(service.name(), embedList);
@@ -262,8 +389,13 @@ public class MonolithDisembedder {
             newServiceParamPair = new Pair<String,TypeDefinition>(service.parameterConfiguration().get().variablePath(), 
                                                                 service.parameterConfiguration().get().type());
         }
+        List<OLSyntaxNode> newList = new ArrayList<>();
+        newList.addAll(service.program().children());
+        Program newProg = new Program(service.context(), newList);
         ServiceNode newServiceNode = ServiceNode.create(service.context(), service.name()+"By"+parent,
-                                                        service.accessModifier(), service.program(), newServiceParamPair);
+                                                        service.accessModifier(), newProg, newServiceParamPair);
+        // As we are disembedding, if the service doesn't have a non-local adress, add it.
+        addNonLocalIPIfNeeded(newServiceNode, service.name());
         newServices.put(service.name()+"By"+parent, newServiceNode);
     }
 
@@ -291,12 +423,9 @@ public class MonolithDisembedder {
 		}
     }
 
-	private static void rewriteConfigFile() throws FileNotFoundException {
+    public static ArrayList<String> getRootNodes(){
 		ArrayList<String> rootNodes = new ArrayList<>();
-		JSONObject configJSON = (JSONObject) JSONValue.parse( new FileReader( configPath.toString() ) );
-		
-		// Find the root node's of the system:
-		for (OLSyntaxNode child : p.children()) {
+        for (OLSyntaxNode child : p.children()) {
 			if (child instanceof ServiceNode) {
 				ServiceNode serviceNode = (ServiceNode) child;
 				// Is this service a root node, if yes add it to the list of root node's
@@ -310,6 +439,12 @@ public class MonolithDisembedder {
 				}
 			}
 		}
+        return rootNodes;
+    }
+
+	private static void rewriteConfigFile() throws FileNotFoundException {
+		ArrayList<String> rootNodes = getRootNodes();
+		JSONObject configJSON = (JSONObject) JSONValue.parse( new FileReader( configPath.toString() ) );
 		JSONObject config = new JSONObject();
 
         // Add the root node's to the config, if they were already defined in the config 
