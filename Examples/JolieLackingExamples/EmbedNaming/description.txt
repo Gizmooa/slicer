@@ -1,0 +1,2 @@
+Inside a Jolie program, if you have nested embeds and both the services are e.g., typing "embed Service1 as S1". Here we'd want each service to use their unique version of S1. But Jolie will start up one service of Service1 and both services will use the same one.
+A workaround would be to say "embed Service1 as S1" and "embed Service1 as Service1" for the embeds. 

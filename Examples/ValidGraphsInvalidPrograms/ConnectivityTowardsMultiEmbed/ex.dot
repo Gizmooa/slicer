@@ -1,0 +1,8 @@
+digraph G {
+	Main -> Greeter; 
+	Main -> Console; 
+	Main -> SecondMain; 
+	Greeter -> Console; 
+	SecondMain -> Console; 
+	SecondMain -> Greeter; 
+}

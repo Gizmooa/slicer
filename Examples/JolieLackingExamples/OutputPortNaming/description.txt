@@ -1,0 +1,1 @@
+If a service A are embeddings a service B, and both of them have some outputPort named G. If service A uses a different location for G than B, if A embeds B, B will use A's version og G instead of its own.

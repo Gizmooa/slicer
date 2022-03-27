@@ -1,0 +1,1 @@
+The old way of performing imports by saying "include X" are not supported within docker, and will throw errors. Instead one should use the imports "From x import y" and embed the service.

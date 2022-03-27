@@ -1,0 +1,10 @@
+digraph G {
+	Service1 -> Service2; 
+	Service1 -> Console; 
+	Service1 -> Service3; 
+	Service2 -> Console; 
+	Service2 -> Service4; 
+	Service3 -> Console; 
+	Service3 -> Service2; 
+	Service4 -> Console; 
+}
