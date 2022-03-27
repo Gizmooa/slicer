@@ -2,6 +2,7 @@ package joliex.slicer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -173,26 +174,38 @@ public class MonolithDisembedder {
         
     }
 
-    public static String findParent(String serviceName, ArrayList<String> rootNodes){
+    private static Set<String> findParentSet(String serviceName, ArrayList<String> rootNodes){
+        Set<String> parents = new HashSet<String> (); 
         if (rootNodes.contains(serviceName)){
-            return serviceName;
+            parents.add(serviceName);
+            return parents;
         }
-        if (embeddings.get(serviceName).size() == 1){
-            return embeddings.get(serviceName).get(0);
+        for (String service : embeddings.get(serviceName)){
+            for (String service22 : findParentSet(service, rootNodes))
+
+                parents.add(service22);
         }
-        else{
-            String embedString = "[";
-            String lastElement = embeddings.get(serviceName).get(embeddings.get(serviceName).size());
-            for (String embed : embeddings.get(serviceName)){
-                if (embed == lastElement){
-                    embedString = embedString + embed + "]";
-                }
-                else{
-                    embedString = embedString + embed + " | ";
-                }
+        return parents;
+    }
+    public static String findParent(String serviceName, ArrayList<String> rootNodes){
+        Set<String> parents = findParentSet(serviceName, rootNodes);
+        if (parents.size() == 1){
+            return parents.iterator().next();
+        }
+        Iterator<String> iter = parents.iterator();
+        String embedString = "[";
+        while(iter.hasNext()){
+            String nextParent = iter.next();
+            embedString = embedString + nextParent;
+            if (!iter.hasNext()){
+                embedString = embedString + "]";
             }
-            return embedString;
+            else{
+                embedString = embedString + "|";
+            }
         }
+
+        return embedString;
     }
 
     private static void addNonLocalIPIfNeeded( ServiceNode service, String actualServiceName ){
@@ -251,6 +264,7 @@ public class MonolithDisembedder {
             .forEach( embedding -> {
                 if(newServices.containsKey(embedding.serviceName()+"By"+service.name())){
                     disembedTheEmbedderMulti(embedding, embedding.serviceName()+"By"+service.name(), service);
+
                 } else
                     try {
                         if (embedShouldBeDisembedded(service, embedding)) {
@@ -394,6 +408,14 @@ public class MonolithDisembedder {
         Program newProg = new Program(service.context(), newList);
         ServiceNode newServiceNode = ServiceNode.create(service.context(), service.name()+"By"+parent,
                                                         service.accessModifier(), newProg, newServiceParamPair);
+        for (String key : embeddings.keySet()){
+            if (embeddings.get(key).contains(service.name())){
+                embeddings.get(key).add(service.name()+"By"+parent);
+            }
+        }
+        // Initialize the new service with no embeds, as it is a stand-alone service.
+        ArrayList<String> embeds = new ArrayList<>();
+        embeddings.put(service.name()+"By"+parent, embeds);
         // As we are disembedding, if the service doesn't have a non-local adress, add it.
         addNonLocalIPIfNeeded(newServiceNode, service.name());
         newServices.put(service.name()+"By"+parent, newServiceNode);
@@ -444,7 +466,16 @@ public class MonolithDisembedder {
 
 	private static void rewriteConfigFile() throws FileNotFoundException {
 		ArrayList<String> rootNodes = getRootNodes();
-		JSONObject configJSON = (JSONObject) JSONValue.parse( new FileReader( configPath.toString() ) );
+        File configfile = new File(configPath.toString());
+        boolean doesConfigJsonAlreadyExist = false;
+        JSONObject configJSON;
+        if (doesConfigJsonAlreadyExist){
+            configJSON = (JSONObject) JSONValue.parse( new FileReader( configPath.toString() ) );
+        }
+        else{
+            configJSON = null;
+        }
+        // This json object will contain the new config w.r.t disembed config.
 		JSONObject config = new JSONObject();
 
         // Add the root node's to the config, if they were already defined in the config 
