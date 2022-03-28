@@ -19,25 +19,39 @@ chmod +x launcher.ol
 5) Success! The slicer should now be callable in any location on your system. Try calling "slicer" and it should print the usage information. 
 
 ## How to use the slicer
-1) Requirements before slicing
+The slicer takes one required parameter; a Jolie file ("monolith.ol") and three optional parameters where at least one of them needs to be present. Usage will be shown beneath where optional parameters are within square brackets, and required parameters are within angle brackets.
+```
+slicer [--config config.json] [--disembed disembed.json] [--visualize example.dot] <monolith.ol>
+```
 
-The slicer requires a Jolie file ("monolith.ol") containing all services and interfaces, along with a config.json file. The config file defines what services the user wants to extract from the monolith, which in the example beneath are Foo and Bar.
+1) --config config.json
+
+The config flag needs to be provided with a json file that defines what services the user wants to extract from the monolith, which in the example beneath are Foo and Bar. This will generate two directories; foo and bar containing docker deployment files, jolie file containing the service, and the config.json. (The config.json can be used for e.g., service parameters in this case) Along with the two directories a docker-compose.yaml file will be generated to spin up the services defined in the config.
 ```
 {
     "Foo": {
-        "location" : "local://T"
+        "location" : "local://5000"
     },
     "Bar": {
-        "location" : "local://CS"
+        "location" : "local://5001"
     }
 }
 ```
-2) Running the slicer
 
-When the slicer has been set up, a monolith has been developed, and a config file has been created the slicer is ready to be used. Inside the folder with the monolith and config file, the user can use the following command to use the slicer:
+2) --disembed disembed.json
+
+The config flag does not make the program docker-ready and therefore the application already needs to be docker ready before slicing. If the user have a monolith they want to make docker-ready, they can use the disembed flag, also provided with a json file. An example for such a json file will be shown beneath where the user wants to disembed Bar from Foo, making Bar a stand-alone service. The program will then generate a config.json with the stand-alone services as keys. If there already exists a config.json with the service as a key, the program will use those values instead of a dummy value. This way the user can provide a config.json together with a disembed.json to provide service parameters and dependencies. 
 ```
-slicer --config config.json monolith.ol
+{
+    "Foo": [
+      "Bar"
+    ]
+}
 ```
+
+3) --visualize example.dot
+
+The visualization flag needs to be provided with a name of a dot file e.g., example.dot. Then combined with either one of the flags above, the program will generate a dot graph corresponding to the system the slicer will generated after slicing with the provided flags and monolith.
 
 ## Setting up jolie development version
 1) Clone jolie GitHub repository at: https://github.com/jolie/jolie
