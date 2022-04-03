@@ -147,7 +147,10 @@ public class MonolithDisembedder {
                                 if(key.equals(outputPort.location().toString())){
                                     String ipParent = findParent(inputPorts.get(key).name(), rootNodes);
                                     String opParent = findParent(currentService.name(), rootNodes);
-                                    // TODO - Maybe add a depends_on dependency here for the op parent
+                                    /*
+                                    // Add a depends_on flag for the docker parent of the output port service.
+                                    // Unfortunately, this created circular depends_on, therefore it is removed
+                                    // until a fix with the circular depends_on.
                                     if (dependsOn.containsKey(opParent)){
                                         dependsOn.get(opParent).add(ipParent);
                                     }
@@ -156,6 +159,7 @@ public class MonolithDisembedder {
                                         node.add(ipParent);
                                         dependsOn.put(opParent, node);
                                     }
+                                    */
                                     // If the parents are equal, keep the adress. Otherwise swap localhost with the ip's parent node aka the docker location
                                     if (!ipParent.equals(opParent)){
                                         String newOutputPort = outputPort.location().toString().replace("localhost", ipParent.toLowerCase());
@@ -467,7 +471,7 @@ public class MonolithDisembedder {
 	private static void rewriteConfigFile() throws FileNotFoundException {
 		ArrayList<String> rootNodes = getRootNodes();
         File configfile = new File(configPath.toString());
-        boolean doesConfigJsonAlreadyExist = false;
+        boolean doesConfigJsonAlreadyExist = configfile.exists();
         JSONObject configJSON;
         if (doesConfigJsonAlreadyExist){
             configJSON = (JSONObject) JSONValue.parse( new FileReader( configPath.toString() ) );
@@ -486,7 +490,7 @@ public class MonolithDisembedder {
 			}
 			else{
 				JSONObject locationFiller = new JSONObject();
-				locationFiller.put("location", "");
+                locationFiller.put("location", "");
 				config.put(rootNode, locationFiller);
 			}
 		}
