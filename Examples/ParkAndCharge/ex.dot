@@ -1,0 +1,21 @@
+digraph G {
+	ChargingStationManagement -> Database; 
+	ChargingStationManagement -> Console; 
+	ChargingStationManagement -> StringUtils; 
+	Gateway -> ChargingStationSharing; 
+	EventBus -> Gateway[ label= "socket://gateway:8100/" color="blue"];
+	EventBus -> ChargingStationManagement[ label= "socket://chargingstationmanagement:8000/" color="blue"];
+	EventBus -> ChargingStationSearch[ label= "socket://chargingstationsearch:8001/" color="blue"];
+	EventBus -> BookingManagement[ label= "socket://bookingmanagement:8003/" color="blue"];
+	EventBus -> EnvironmentalDataAnalysis[ label= "socket://environmentaldataanalysis:8004/" color="blue"];
+	BookingManagement -> EventBus[ label= "socket://eventbus:5672/" color="blue"];
+	ChargingStationSearch -> EventBus[ label= "socket://eventbus:5672/" color="blue"];
+	ChargingStationSharing -> EventBus[ label= "socket://eventbus:5672/" color="blue"];
+	EnvironmentalDataAnalysis -> EventBus[ label= "socket://eventbus:5672/" color="blue"];
+	Gateway -> BookingManagement[ label= "socket://bookingmanagement:8003/" color="blue"];
+	Gateway -> EventBus[ label= "socket://eventbus:5672/" color="blue"];
+	Gateway -> ChargingStationSearch[ label= "socket://chargingstationsearch:8001/" color="blue"];
+	Gateway -> ChargingStationManagement[ label= "socket://chargingstationmanagement:8000/" color="blue"];
+	Gateway -> EnvironmentalDataAnalysis[ label= "socket://environmentaldataanalysis:8004/" color="blue"];
+	EventBus -> ChargingStationSharing[ label= "socket://gateway:8002/" color="blue"];
+}

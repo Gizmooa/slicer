@@ -1,0 +1,7 @@
+{
+"Gateway": [
+  "BookingManagement", "ChargingStationManagement",
+  "ChargingStationSearch", "EnvironmentalDataAnalysis",
+  "EventBus"
+]
+}
