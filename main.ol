@@ -39,7 +39,7 @@ service Main {
 		if( is_defined( __tool ) && is_string( __tool ) ) {
 			println@console( "Usage: " + __tool + " <program_file> -c <config_file> -o <output_directory>" )()
 		} else {
-			println@console( "Usage: slicer <program_file> -c <config_file> -o <output_directory>" )()
+			println@console( "Usage: slicer [--config config.json] [--disembed disembed.json] [--visualize example.dot] <monolith.ol>" )()
 		}
 	}
 

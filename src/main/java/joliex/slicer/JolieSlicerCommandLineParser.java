@@ -81,7 +81,7 @@ public class JolieSlicerCommandLineParser extends CommandLineParser {
 
 	@Override
 	protected String getHelpString() {
-		return new StringBuilder().append( "Usage: jolieslicer --service name_of_service program_file\n\n" ).toString();
+		return new StringBuilder().append( "Usage: slicer [--config config.json] [--disembed disembed.json] [--visualize example.dot] <monolith.ol>\n\n" ).toString();
 	}
 
 	public String getServiceName() {
