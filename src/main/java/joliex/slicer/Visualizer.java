@@ -7,12 +7,10 @@ import java.util.Map;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.security.Provider.Service;
 
 import jolie.lang.parse.ast.EmbedServiceNode;
 import jolie.lang.parse.ast.Program;
 import jolie.lang.parse.ast.ServiceNode;
-import jolie.runtime.expression.InlineTreeExpression;
 import jolie.lang.parse.ast.InputPortInfo;
 import jolie.lang.parse.ast.OutputPortInfo;
 
@@ -27,13 +25,22 @@ public class Visualizer {
         this.dotFileName = dotFileName;
     }
 
+    /**
+     * Constructor for the Visualizer
+     * 
+     * @param p: Datastructure containing the OLSyntaxTree of the jolie program
+     * @param dotFileName: Filename where the program will save the DOT graph
+     * @param helperMap: Helper map from MonolithicDisembedder, makes connectivity edges easier to identify
+     */
     public Visualizer(Program p, String dotFileName, HashMap<String, ArrayList<ServiceNode>> helperMap){
         Visualizer.p = p;
         this.dotFileName = dotFileName;
         Visualizer.helperMap = helperMap;
     }
 
-    // Used to match endpoints, aka IP and OP of services
+    /**
+     * Matches endpoints of services by matching IP -> OP
+     */
     public void matchEndPoints(){
         HashMap<String, ServiceNode> inputPorts = new HashMap<>();
 
@@ -50,7 +57,7 @@ public class Visualizer {
                     .filter( InputPortInfo.class::isInstance )
                     .map( InputPortInfo.class::cast )
                     .forEach(inputPort -> {
-                        // Add both the docker-input version and the normal.
+                        // Add both the docker-proxy and the normal location.
                         inputPorts.put(inputPort.location().toString().replaceAll("localhost", service.name().toLowerCase()), service);
                         inputPorts.put(inputPort.location().toString(), service);
                     }));
@@ -110,7 +117,10 @@ public class Visualizer {
                     .forEach(embed -> EmbedEdges.add(new Edge(service, embed.service()))));
                     
     }
-
+    /**
+     * Used to create and write to the dot file with the graph representation
+     * of the program.
+     */
     public void generateDotFile(){
         // Create the DOT file.
         createDotFile();

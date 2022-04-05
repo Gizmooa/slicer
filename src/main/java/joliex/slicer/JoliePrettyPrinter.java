@@ -20,7 +20,6 @@
 
 package joliex.slicer;
 
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -33,9 +32,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import java.io.File;
-import java.io.FileNotFoundException;
 
 import jolie.lang.Constants;
 import jolie.lang.parse.UnitOLVisitor;
