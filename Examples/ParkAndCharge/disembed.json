@@ -1,7 +1,10 @@
 {
-"Gateway": [
+"EventBus": [
   "BookingManagement", "ChargingStationManagement",
   "ChargingStationSearch", "EnvironmentalDataAnalysis",
+  "ChargingStationSharing"
+],
+"Gateway": [
   "EventBus"
 ]
 }

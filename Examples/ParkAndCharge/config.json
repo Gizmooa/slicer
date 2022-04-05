@@ -1,1 +1,1 @@
-{"BookingManagement":{"location":""},"Gateway":{"location":""},"ChargingStationManagement":{"dependencies":["hsqldb.jar","json-simple-1.1.1.jar"]},"EventBus":{"location":""},"EnvironmentalDataAnalysis":{"location":""},"ChargingStationSearch":{"location":""}}
+{"BookingManagement":{"location":""},"Gateway":{"location":""},"ChargingStationManagement":{"location":"","dependencies":["hsqldb.jar","json-simple-1.1.1.jar"]},"EventBus":{"location":""},"EnvironmentalDataAnalysis":{"location":""},"ChargingStationSearch":{"location":""},"ChargingStationSharing":{"location":""}}

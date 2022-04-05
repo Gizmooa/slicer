@@ -73,6 +73,11 @@ interface GatewayInterface {
 service EventBus {
 
     execution{ concurrent }
+    embed BookingManagement as BMServer
+    embed ChargingStationSearch as CSSServer
+    embed ChargingStationManagement as CSMServer
+    embed ChargingStationSharing as CSSharingServer
+    embed EnvironmentalDataAnalysis as EDAServer
 
     inputPort EBServerLocal {
         Location: "local"
@@ -90,36 +95,6 @@ service EventBus {
         Location: "socket://localhost:8100/"
         Protocol: http { .format = "json" }
         Interfaces: GatewayInterface
-    }
-
-    outputPort CSMServer {
-        Location: "socket://localhost:8000/"
-        Protocol: http { .format = "json" }
-        Interfaces: CSMInterface
-    }
-
-    outputPort CSSServer {
-        Location: "socket://localhost:8001/"
-        Protocol: http { .format = "json" }
-        Interfaces: CSSInterface
-    }
-
-    outputPort CSSharingServer {
-        Location: "socket://localhost:8002/"
-        Protocol: http { .format = "json" }
-        Interfaces: CSSharingInterface
-    }
-
-    outputPort BMServer {
-        Location: "socket://localhost:8003/"
-        Protocol: http { .format = "json" }
-        Interfaces: BMInterface
-    }
-
-    outputPort EDAServer {
-        Location: "socket://localhost:8004/"
-        Protocol: http { .format = "json" }
-        Interfaces: EDAInterface
     }
 
     main
@@ -375,6 +350,12 @@ service ChargingStationManagement {
         Protocol: http { .format = "json" }
         Interfaces: CSMInterface
     }
+    
+    outputPort EBServer {
+        Location: "socket://localhost:5672/"
+        Protocol: http { .format = "json" }
+        Interfaces: EBInterface
+    }
 
     init
     {
@@ -550,12 +531,7 @@ service ChargingStationManagement {
 service Gateway {
 
     execution{ concurrent }
-    embed BookingManagement as BM
     embed EventBus as EB
-    embed ChargingStationSearch as CSSearch
-    embed ChargingStationManagement as CSManagement
-    embed ChargingStationSharing as CSSharing
-    embed EnvironmentalDataAnalysis as EDA
 
     inputPort GatewayServer {
         Location: "socket://localhost:8100/"
