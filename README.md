@@ -5,7 +5,7 @@ We propose Sliceable Monolith, a new methodology for developing microservice arc
 ## Download and setup the slicer
 The following steps require Jolie and Java 11 to be installed, there will be provided a step-by-step guide, in the end, describing how to set the Jolie development version up. 
 
-1) Clone Jolie Slicer GitHub repository at: https://github.com/jolie/slicer
+1) Clone Jolie Slicer GitHub repository at: https://github.com/Gizmooa/slicer
 2) Change directory to the slicer, and download maven dependencies using the command “mvn install”
 3) Create the following symlinks to use the slicer in any location:
 ```
