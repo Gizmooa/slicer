@@ -21,7 +21,7 @@ chmod +x launcher.ol
 ## How to use the slicer
 The slicer takes one required parameter; a Jolie file ("monolith.ol") and three optional parameters where at least one of them needs to be present. Usage will be shown beneath where optional parameters are within square brackets, and required parameters are within angle brackets.
 ```
-slicer [--config config.json] [--disembed disembed.json] [--visualize example.dot] <monolith.ol>
+slicer [--config config.json] [--disembedConfig disembed.json] [--visualize example.dot] <monolith.ol>
 ```
 
 1) --config config.json
@@ -38,7 +38,7 @@ The config flag needs to be provided with a json file that defines what services
 }
 ```
 
-2) --disembed disembed.json
+2) --disembedConfig disembed.json
 
 The config flag does not make the program docker-ready and therefore the application already needs to be docker ready before slicing. If the user have a monolith they want to make docker-ready, they can use the disembed flag, also provided with a json file. An example for such a json file will be shown beneath where the user wants to disembed Bar from Foo, making Bar a stand-alone service. The program will then generate a config.json with the stand-alone services as keys. If there already exists a config.json with the service as a key, the program will use those values instead of a dummy value. This way the user can provide a config.json together with a disembed.json to provide service parameters and dependencies. 
 ```
